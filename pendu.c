@@ -5,6 +5,12 @@
 
 // Declaration des structures
 
+//Structure Joueur : contenant les informations des joueurs (pseudo, ordre).
+
+//Structure propostion :Structure regroupant le mot crypté, et les lettres proposées.
+
+//Structure pendu : Structure ayant le mot, le nombre de tentative et le nombre de vies restantes.
+
 
 main()
 {
@@ -12,9 +18,6 @@ main()
     return 0;
 }
 
-/*InitJeu : Elle instancie une partie*/
-void InitJeu()
-{}
 
 /*InitMot : Elle génère un mot du dictionnaire Larousse*/
 void InitMot()
