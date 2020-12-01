@@ -1,3 +1,4 @@
+
 /*
 Jeu du Pendu
 
@@ -12,7 +13,13 @@ Fonctions principales de gestion du jeu
 #include <ctype.h>
 #include <string.h>
 
-#include <dico.h>
+//#include "dico.h"
+
+
+//Fonction joueur
+// -- Instancie le joueur + gestion mise en attente + Lien client/server
+
+
 
 int gagne(int lettreTrouvee[], long tailleMot);
 int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);

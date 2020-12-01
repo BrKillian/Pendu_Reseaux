@@ -5,14 +5,26 @@ Serveur à lancer avant le client
 #include <stdio.h>
 #include <linux/types.h> 	/* pour les sockets */
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <pthread.h>
+
+
+
 #include <netdb.h> 		/* pour hostent, servent */
 #include <string.h> 		/* pour bcopy, ... */  
+
 #define TAILLE_MAX_NOM 256
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
+
+//Define socket
+
 
 /*------------------------------------------------------*/
 void renvoi (int sock) {
