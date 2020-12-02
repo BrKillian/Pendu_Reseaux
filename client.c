@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 
     //Saisie du pseudo du joueur
     printf("Veuillez saisir votre pseudo : \n");
-    fgets(pseudo, sizeof(pseudo), stdin);
+    fgets(pseudo, sizeof pseudo, stdin);
     pseudo[strcspn(pseudo, "\n")] = '\0';
     if ((write(socket_descriptor,pseudo,strlen(pseudo)))< 0){
         perror("erreur : impossible d'écrire le message destine au serveur.");
@@ -151,9 +151,6 @@ int main(int argc, char **argv) {
     printf("Vous quittez le Jeu du Pendu... Fermeture..");
 
    
-
-
-
     /* mise en attente du prgramme pour simuler un delai de transmission */
    // sleep(3);
      
