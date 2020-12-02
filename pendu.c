@@ -12,7 +12,7 @@ Fonctions principales de gestion du jeu
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-
+#include "dico.c"
 //#include "dico.h"
 
 
