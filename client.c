@@ -48,6 +48,7 @@ int main(int argc, char **argv) {
     char *	host; 			/* nom de la machine distante */
     char *	mesg; 			/* message envoyé */
     pthread_t thread_listen  ;
+    char pseudo[32];
      
     if (argc != 3) {
 	perror("usage : client <adresse-serveur> <message-a-transmettre>");
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
 
     //Saisie du pseudo du joueur
     printf("Veuillez saisir votre pseudo : \n");
-    fgets(pseudo, siezof pseudo, stdin);
+    fgets(pseudo, sizeof pseudo, stdin);
     pseudo[strcspn(pseudo, "\n")] = '\0';
     if ((write(socket_descriptor,pseudo,strlen(pseudo)))< 0){
         perror("erreur : impossible d'écrire le message destine au serveur.");
@@ -133,7 +134,7 @@ int main(int argc, char **argv) {
 
 
     // Le client se met en maintenant en écoute
-    pthread_create(&thread_listen,NULL, ecoute, &socket_descriptor)
+    pthread_create(&thread_listen,NULL, ecoute, &socket_descriptor);
 
     //Tant que les messages émis sont différents de "quit"
     while(strcmp(mesg,"quit")!='\0'){
@@ -147,12 +148,9 @@ int main(int argc, char **argv) {
             exit(1);
             }
     }
-    printf("Vous quittez le Jeu du Pendu... Fermeture..")
+    printf("Vous quittez le Jeu du Pendu... Fermeture..");
 
    
-
-
-
     /* mise en attente du prgramme pour simuler un delai de transmission */
    // sleep(3);
      

@@ -13,12 +13,12 @@ Fonctions principales de gestion du jeu
 #include <ctype.h>
 #include <string.h>
 
-//#include "dico.h"
+#include "dico.h"
+#include "dico.c"
 
 
 //Fonction joueur
 // -- Instancie le joueur + gestion mise en attente + Lien client/server
-
 
 
 int gagne(int lettreTrouvee[], long tailleMot);
@@ -98,6 +98,7 @@ char lireCaractere()
     return caractere; // On retourne le premier caractère qu'on a lu
 }
 
+//Coté serveur
 int gagne(int lettreTrouvee[], long tailleMot)
 {
     long i = 0;
@@ -112,6 +113,7 @@ int gagne(int lettreTrouvee[], long tailleMot)
     return joueurGagne;
 }
 
+//Coté serveur
 int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[])
 {
     long i = 0;

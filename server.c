@@ -25,6 +25,13 @@ typedef struct servent servent;
 
 //Define socket
 
+//A FAIRE
+/*
+   Fonction gérer les Thread
+   Creer Thread : permet une connexion Client-Serveur
+   Separer le jeu du pendu
+
+*/
 
 /*------------------------------------------------------*/
 void renvoi (int sock) {
