@@ -38,8 +38,8 @@ static void * ecoute (void * socket_descriptor){
 
 int main(int argc, char **argv) {
   
-    int 	socket_descriptor, 	/* descripteur de socket */
-		longueur; 		/* longueur d'un buffer utilisé */
+    int 	socket_descriptor ; 	/* descripteur de socket */
+	int 	longueur; 		/* longueur d'un buffer utilisé */
     sockaddr_in adresse_locale; 	/* adresse de socket local */
     hostent *	ptr_host; 		/* info sur une machine hote */
     servent *	ptr_service; 		/* info sur service */
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     char pseudo[32];
      
     if (argc != 3) {
-	perror("usage : client <adresse-serveur> <message-a-transmettre>");
+	perror("usage : client <adresse-serveur> <type_message>");
 	exit(1);
     }
    
@@ -118,11 +118,11 @@ int main(int argc, char **argv) {
     if ((write(socket_descriptor,pseudo,strlen(pseudo)))< 0){
         perror("erreur : impossible d'écrire le message destine au serveur.");
     }
-
+    mesg = pseudo;
 
     printf("envoi d'un message au serveur. \n");
       
-    /* envoi du message vers le serveur */
+    /* envoi du psuedo vers le serveur */
     if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
 	perror("erreur : impossible d'ecrire le message destine au serveur.");
 	exit(1);
@@ -131,7 +131,9 @@ int main(int argc, char **argv) {
     printf("Vous avez choisi le pseudo : %s !\n", pseudo);
     //Explication Pendu
     // A FAIRE
-
+    printf("**************************\n");
+    printf("****** REGLE DU JEU ******\n");
+    printf("**************************\n");
 
     // Le client se met en maintenant en écoute
     pthread_create(&thread_listen,NULL, ecoute, &socket_descriptor);
