@@ -24,20 +24,26 @@ typedef struct hostent hostent;
 typedef struct servent servent;
 
 //Define socket
+#Define NB_JOUEURS 4
 
-//A FAIRE
-/*
-   Fonction gérer les Thread
-   Creer Thread : permet une connexion Client-Serveur
-   Separer le jeu du pendu
 
-*/
+void msg_all(int socks[5],char * msg){
+  for(int i =0;i< NB_JOUEURS ; i++){
+    write(sockets[i],message,strlen(message));
+  }
+}
 
 /*------------------------------------------------------*/
-void renvoi (int sock) {
+void pendu(int sock) {
 
     char buffer[256];
     int longueur;
+    char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
+    char motSecret[100] = {0}; // Ce sera le mot à trouver
+    int *lettreTrouvee = NULL; // Un tableau de booléens. Chaque case correspond à une lettre du mot secret. 0 = lettre non trouvée, 1 = lettre trouvée
+    long coupsRestants = 10; // Compteur de coups restants (0 = mort)
+    long i = 0; // Une petite variable pour parcourir les tableaux
+    long tailleMot = 0;
    
     if ((longueur = read(sock, buffer, sizeof(buffer))) <= 0) 
     	return;
@@ -71,6 +77,7 @@ main(int argc, char **argv) {
     int 		socket_descriptor, 		/* descripteur de socket */
 			nouv_socket_descriptor, 	/* [nouveau] descripteur de socket */
 			longueur_adresse_courante; 	/* longueur d'adresse courante d'un client */
+
     sockaddr_in 	adresse_locale, 		/* structure d'adresse locale*/
 			adresse_client_courant; 	/* adresse client courant */
     hostent*		ptr_hote; 			/* les infos recuperees sur la machine hote */
@@ -141,11 +148,12 @@ main(int argc, char **argv) {
 			perror("erreur : impossible d'accepter la connexion avec le client.");
 			exit(1);
 		}
+    
 		
 		/* traitement du message */
 		printf("reception d'un message.\n");
 		
-		renvoi(nouv_socket_descriptor);
+		pendu(nouv_socket_descriptor);
 						
 		close(nouv_socket_descriptor);
 		

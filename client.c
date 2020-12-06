@@ -129,9 +129,6 @@ int main(int argc, char **argv) {
     }
 
     printf("Vous avez choisi le pseudo : %s !\n", pseudo);
-    //Explication Pendu
-    // A FAIRE
-
 
     // Le client se met en maintenant en écoute
     pthread_create(&thread_listen,NULL, ecoute, &socket_descriptor);
