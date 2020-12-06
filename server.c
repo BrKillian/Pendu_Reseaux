@@ -17,19 +17,17 @@ Serveur à lancer avant le client
 #include <string.h> 		/* pour bcopy, ... */  
 
 #define TAILLE_MAX_NOM 256
+#define NB_JOUEURS 5
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-//Define socket
-#Define NB_JOUEURS 4
-
 
 void msg_all(int socks[5],char * msg){
   for(int i =0;i< NB_JOUEURS ; i++){
-    write(sockets[i],message,strlen(message));
+    write(socks[i],msg,strlen(msg));
   }
 }
 
@@ -83,6 +81,7 @@ main(int argc, char **argv) {
     hostent*		ptr_hote; 			/* les infos recuperees sur la machine hote */
     servent*		ptr_service; 			/* les infos recuperees sur le service de la machine */
     char 		machine[TAILLE_MAX_NOM+1]; 	/* nom de la machine locale */
+    pthread_t thread_joueurs[NB_JOUEURS]; //Tableau contenant les threads des joueurs 
     
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
     
@@ -140,21 +139,22 @@ main(int argc, char **argv) {
 		longueur_adresse_courante = sizeof(adresse_client_courant);
 		
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
-		if ((nouv_socket_descriptor = 
-			accept(socket_descriptor, 
-			       (sockaddr*)(&adresse_client_courant),
-			       &longueur_adresse_courante))
-			 < 0) {
+		if ((nouv_socket_descriptor = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante))< 0) {
 			perror("erreur : impossible d'accepter la connexion avec le client.");
 			exit(1);
 		}
+
+    //Comment gérer les différents joueurs dans les tableaux de thread et de socket ? Récup dans le socket ? 06/12/2020
+    if( pthread_create( &thread_joueurs , NULL ,  pendu , (void*) &nouv_socket_descriptor) < 0)
+      {
+          perror("could not create thread");
+          exit(1);
+      }
+      
     
-		
 		/* traitement du message */
 		printf("reception d'un message.\n");
-		
-		pendu(nouv_socket_descriptor);
-						
+					
 		close(nouv_socket_descriptor);
 		
     }
