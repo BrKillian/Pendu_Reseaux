@@ -21,30 +21,36 @@ Serveur à lancer avant le client
 #include <string.h> 		/* pour bcopy, ... */  
 
 #define TAILLE_MAX_NOM 256
+#define NB_JOUEURS 5
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-pthread_t thread_pendu;
+
+
+
+/*------------------------------------------------------*/
+
 
 //DECLARATION DE FONCTION
-  int gagne(int lettreTrouvee[], long tailleMot);
-  int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);
-  char lireCaractere();
-  void Pendu();
-  void message_global(int sockets[], char * message);
+int gagne(int lettreTrouvee[], long tailleMot);
+int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);
+char lireCaractere();
+void pendu();
+void message_global(int socks[], char * message);
 
 
-//VARIABLE GLOBALE
-int nb_joueurs = 5 ;
-int sockets[5];
-
+void msg_all(int socks[5],char * msg){
+  for(int i =0;i< NB_JOUEURS ; i++){
+    write(socks[i],msg,strlen(msg));
+  }
+}
 
 //JEU DU PENDU
 
-void Pendu()
+void pendu()
 {
     char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
     char motSecret[100] = {0}; // Ce sera le mot à trouver
@@ -184,36 +190,29 @@ char lireCaractere()
 }*/
 
 
-
-void message_global(int sockets[], char * message)
-{
-  for(int i = 0; i < nb_joueurs; i++)
-  {
-    write(sockets[i], message, strlen(message));
-  }
-}
-
 /*------------------------------------------------------*/
 
 /*------------------------------------------------------*/
 main(int argc, char **argv) {
   
     int 		socket_descriptor, 		/* descripteur de socket */
-			nouv_socket_descriptor, 	/* [nouveau] descripteur de socket */
+			nouv_socket_descriptor[NB_JOUEURS], 	/* [nouveau] descripteur de socket */
 			longueur_adresse_courante; 	/* longueur d'adresse courante d'un client */
+
     sockaddr_in 	adresse_locale, 		/* structure d'adresse locale*/
 			adresse_client_courant; 	/* adresse client courant */
     hostent*		ptr_hote; 			/* les infos recuperees sur la machine hote */
     servent*		ptr_service; 			/* les infos recuperees sur le service de la machine */
     char 		machine[TAILLE_MAX_NOM+1]; 	/* nom de la machine locale */
-    int ret ;                         /* Retour Thread*/
+    pthread_t thread_joueurs[NB_JOUEURS]; //Tableau contenant les threads des joueurs 
+    int ret ;/* Retour Thread*/
     
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
     
     /* recuperation de la structure d'adresse en utilisant le nom */
     if ((ptr_hote = gethostbyname(machine)) == NULL) {
-		perror("erreur : impossible de trouver le serveur a partir de son nom.");
-		exit(1);
+		  perror("erreur : impossible de trouver le serveur a partir de son nom.");
+		  exit(1);
     }
     
     /* initialisation de la structure adresse_locale avec les infos recuperees */			
@@ -256,30 +255,34 @@ main(int argc, char **argv) {
     }
     
     /* initialisation de la file d'ecoute */
-    listen(socket_descriptor,5);
+    listen(socket_descriptor,NB_JOUEURS);
 
-    /* attente des connexions et traitement des donnees recues */
-    for(;;) {
+    /* Création des différents thread  */
+    for(int i = 0; i < NB_JOUEURS; ++i)  {
     
-		longueur_adresse_courante = sizeof(adresse_client_courant);
+		  longueur_adresse_courante = sizeof(adresse_client_courant);
 		
-		/* adresse_client_courant sera renseigné par accept via les infos du connect */
-		if ((nouv_socket_descriptor = 
-			accept(socket_descriptor, 
-			       (sockaddr*)(&adresse_client_courant),
-			       &longueur_adresse_courante))
-			 < 0) {
-			perror("erreur : impossible d'accepter la connexion avec le client.");
-			exit(1);
-		}
-		
-		/* traitement du jeu du pendu */
-		printf("reception d'un message.\n");
-		
-		Pendu();
-						
-		close(nouv_socket_descriptor);
-		
+
+		  /* adresse_client_courant sera renseigné par accept via les infos du connect */
+		  if ((nouv_socket_descriptor[i] = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante))< 0) {
+			  perror("erreur : impossible d'accepter la connexion avec le client.");
+			  exit(1);
+		  }
+
+  
+      if( pthread_create( &thread_joueurs[i] , NULL ,  pendu , (void*) &nouv_socket_descriptor[i]) < 0)
+      {
+        perror("erreur : impossible de créer le thread");
+        exit(1);
+      }
+      
+    
+		  /* traitement du message */
+		  printf("reception d'un message.\n");
+					
+		  close(nouv_socket_descriptor[i]);
+	
+	
     }
     
 }
