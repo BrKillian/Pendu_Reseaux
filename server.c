@@ -36,12 +36,6 @@ void pendu(int sock) {
 
     char buffer[256];
     int longueur;
-    char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
-    char motSecret[100] = {0}; // Ce sera le mot à trouver
-    int *lettreTrouvee = NULL; // Un tableau de booléens. Chaque case correspond à une lettre du mot secret. 0 = lettre non trouvée, 1 = lettre trouvée
-    long coupsRestants = 10; // Compteur de coups restants (0 = mort)
-    long i = 0; // Une petite variable pour parcourir les tableaux
-    long tailleMot = 0;
    
     if ((longueur = read(sock, buffer, sizeof(buffer))) <= 0) 
     	return;
@@ -73,7 +67,7 @@ void pendu(int sock) {
 main(int argc, char **argv) {
   
     int 		socket_descriptor, 		/* descripteur de socket */
-			nouv_socket_descriptor, 	/* [nouveau] descripteur de socket */
+			nouv_socket_descriptor[NB_JOUEURS], 	/* [nouveau] descripteur de socket */
 			longueur_adresse_courante; 	/* longueur d'adresse courante d'un client */
 
     sockaddr_in 	adresse_locale, 		/* structure d'adresse locale*/
@@ -131,31 +125,31 @@ main(int argc, char **argv) {
     }
     
     /* initialisation de la file d'ecoute */
-    listen(socket_descriptor,5);
+    listen(socket_descriptor,NB_JOUEURS);
 
-    /* attente des connexions et traitement des donnees recues */
-    for(;;) {
+    /* Création des différents thread  */
+    for(int i = 0; i < NB_JOUEURS; ++i)  {
     
-		longueur_adresse_courante = sizeof(adresse_client_courant);
+		  longueur_adresse_courante = sizeof(adresse_client_courant);
 		
-		/* adresse_client_courant sera renseigné par accept via les infos du connect */
-		if ((nouv_socket_descriptor = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante))< 0) {
-			perror("erreur : impossible d'accepter la connexion avec le client.");
-			exit(1);
-		}
+		  /* adresse_client_courant sera renseigné par accept via les infos du connect */
+		  if ((nouv_socket_descriptor[i] = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante))< 0) {
+			  perror("erreur : impossible d'accepter la connexion avec le client.");
+			  exit(1);
+		  }
 
-    //Comment gérer les différents joueurs dans les tableaux de thread et de socket ? Récup dans le socket ? 06/12/2020
-    if( pthread_create( &thread_joueurs , NULL ,  pendu , (void*) &nouv_socket_descriptor) < 0)
+  
+      if( pthread_create( &thread_joueurs[i] , NULL ,  pendu , (void*) &nouv_socket_descriptor[i]) < 0)
       {
-          perror("could not create thread");
-          exit(1);
+        perror("erreur : impossible de créer le thread");
+        exit(1);
       }
       
     
-		/* traitement du message */
-		printf("reception d'un message.\n");
+		  /* traitement du message */
+		  printf("reception d'un message.\n");
 					
-		close(nouv_socket_descriptor);
+		  close(nouv_socket_descriptor);
 		
     }
     
