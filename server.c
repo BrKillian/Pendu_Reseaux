@@ -273,10 +273,10 @@ main(int argc, char **argv) {
 			exit(1);
 		}
 		
-		/* traitement du message */
+		/* traitement du jeu du pendu */
 		printf("reception d'un message.\n");
 		
-		renvoi(nouv_socket_descriptor);
+		pendu();
 						
 		close(nouv_socket_descriptor);
 		
