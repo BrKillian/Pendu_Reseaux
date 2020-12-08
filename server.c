@@ -33,7 +33,7 @@ pthread_t thread_pendu;
   int gagne(int lettreTrouvee[], long tailleMot);
   int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);
   char lireCaractere();
-  void Pendu(int argc, char* argv[]);
+  void Pendu();
   void message_global(int sockets[], char * message);
 
 
@@ -44,7 +44,7 @@ int sockets[5];
 
 //JEU DU PENDU
 
-void Pendu(int argc, char* argv[])
+void Pendu()
 {
     char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
     char motSecret[100] = {0}; // Ce sera le mot à trouver
@@ -276,7 +276,7 @@ main(int argc, char **argv) {
 		/* traitement du jeu du pendu */
 		printf("reception d'un message.\n");
 		
-		pendu();
+		Pendu();
 						
 		close(nouv_socket_descriptor);
 		
