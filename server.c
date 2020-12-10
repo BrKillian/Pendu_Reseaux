@@ -22,6 +22,7 @@ Serveur à lancer avant le client
 
 #define TAILLE_MAX_NOM 256
 #define NB_JOUEURS 5
+int lst_socket [NB_JOUEURS];
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
@@ -38,19 +39,29 @@ typedef struct servent servent;
 int gagne(int lettreTrouvee[], long tailleMot);
 int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);
 char lireCaractere();
-void pendu();
-void message_global(int socks[], char * message);
+void pendu(int socket);
+void msg_all(int socks[], char * msg);
+int ctrl_tab(int tab[],int longueur);
 
 
-void msg_all(int socks[5],char * msg){
+void msg_all(int socks[NB_JOUEURS],char * msg){
   for(int i =0;i< NB_JOUEURS ; i++){
     write(socks[i],msg,strlen(msg));
   }
 }
 
-//JEU DU PENDU
+int ctrl_tab(int tab[],int longueur){
+  int vretour = 0;
+  for(int i=0;i< longueur;i++){
+    if(tab[i] != NULL){
+      vretour ++;
+    }
+  }
+  return vretour;
+}
 
-void pendu()
+//JEU DU PENDU pour l'utilisateur courant
+void pendu(int socket)
 {
     char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
     char motSecret[100] = {0}; // Ce sera le mot à trouver
@@ -58,9 +69,22 @@ void pendu()
     long coupsRestants = 10; // Compteur de coups restants (0 = mort)
     long i = 0; // Une petite variable pour parcourir les tableaux
     long tailleMot = 0;
+    char msg[100]; //stock les msg à envoyer au joueur courant
 
-    printf("Bienvenue dans le Pendu !\n\n");
-
+  //contrôle pour l'affichage des msg de bienvenu et pour le démarrage de la partie
+    switch(ctrl_tab(&lst_socket[i],NB_JOUEURS))
+    {
+      case 0 : msg="t"; break;
+      case 1: msg=""; break;
+      case NB_JOUEURS : msg=""; break;
+      default : msg="";
+    }
+    write(socket,msg,sizeof(msg));
+  
+    
+    //penser à ajouter un default
+    msg_all(socket,"Bienvenue dans le Pendu !\n\n");  
+    
     if (!piocherMot(motSecret))
         exit(0);
 
@@ -77,27 +101,31 @@ void pendu()
      n'a pas gagné */
     while (coupsRestants > 0 && !gagne(lettreTrouvee, tailleMot))
     {
-        printf("\n\nIl vous reste %ld coups a jouer", coupsRestants);
-        printf("\nQuel est le mot secret ? ");
-
+        msg_all(socket,("\n\nIl vous reste %ld coups a jouer", coupsRestants));
+        msg_all(socket,"\nQuel est le mot secret ? ");
+        
         /* On affiche le mot secret en masquant les lettres non trouvées
         Exemple : *A**ON */
         for (i = 0 ; i < tailleMot ; i++)
         {
-            if (lettreTrouvee[i]) // Si on a trouvé la lettre n° i
-                printf("%c", motSecret[i]); // On l'affiche
+            // Si on a trouvé la lettre n° i
+            if (lettreTrouvee[i]) 
+                msg_all(socket,("%c", motSecret[i])); 
+            // Sinon, on affiche une étoile pour les lettres non trouvées
             else
-                printf("*"); // Sinon, on affiche une étoile pour les lettres non trouvées
+                msg_all(socket,"*"); 
         }
 
-        printf("\nProposez une lettre : ");
-        lettre = lireCaractere();
-
+      //peut-être ajouter une boucle for sur le nb_joueurs ??
+        msg_all(socket,"\nProposez une lettre : ");
+        read(socket, lettre , sizeof(lettre));
+        
         // Si ce n'était PAS la bonne lettre
         if (!rechercheLettre(lettre, motSecret, lettreTrouvee))
         {
             coupsRestants--; // On enlève un coup au joueur
         }
+      //ici compris
     }
 
     if (gagne(lettreTrouvee, tailleMot))
@@ -163,7 +191,7 @@ char lireCaractere()
 
     char buffer[256];
     int longueur;
-   
+  
     if ((longueur = read(sock, buffer, sizeof(buffer))) <= 0) 
     	return;
     
@@ -196,7 +224,7 @@ char lireCaractere()
 main(int argc, char **argv) {
   
     int 		socket_descriptor, 		/* descripteur de socket */
-			nouv_socket_descriptor[NB_JOUEURS], 	/* [nouveau] descripteur de socket */
+			nouv_socket_descriptor, 	/* [nouveau] descripteur de socket */
 			longueur_adresse_courante; 	/* longueur d'adresse courante d'un client */
 
     sockaddr_in 	adresse_locale, 		/* structure d'adresse locale*/
@@ -217,8 +245,8 @@ main(int argc, char **argv) {
     
     /* initialisation de la structure adresse_locale avec les infos recuperees */			
     
-    /* copie de ptr_hote vers adresse_locale */
-    bcopy((char*)ptr_hote->h_addr, (char*)&adresse_locale.sin_addr, ptr_hote->h_length);
+    /* copie de ptr_hote vers adresse_locale , modif de h_addr en h_addr_list(10/12/2020) */
+    bcopy((char*)ptr_hote->h_addr_list, (char*)&adresse_locale.sin_addr, ptr_hote->h_length);
     adresse_locale.sin_family		= ptr_hote->h_addrtype; 	/* ou AF_INET */
     adresse_locale.sin_addr.s_addr	= INADDR_ANY; 			/* ou AF_INET */
 
@@ -264,13 +292,14 @@ main(int argc, char **argv) {
 		
 
 		  /* adresse_client_courant sera renseigné par accept via les infos du connect */
-		  if ((nouv_socket_descriptor[i] = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante))< 0) {
+		  if ((nouv_socket_descriptor = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante))< 0) {
 			  perror("erreur : impossible d'accepter la connexion avec le client.");
 			  exit(1);
 		  }
+      lst_socket[i] = nouv_socket_descriptor;
 
   
-      if( pthread_create( &thread_joueurs[i] , NULL ,  pendu , (void*) &nouv_socket_descriptor[i]) < 0)
+      if( pthread_create( &thread_joueurs[i] , NULL ,  pendu , (void*) &nouv_socket_descriptor) < 0)
       {
         perror("erreur : impossible de créer le thread");
         exit(1);
@@ -280,7 +309,7 @@ main(int argc, char **argv) {
 		  /* traitement du message */
 		  printf("reception d'un message.\n");
 					
-		  close(nouv_socket_descriptor[i]);
+		  close(lst_socket[i]);
 	
 	
     }
