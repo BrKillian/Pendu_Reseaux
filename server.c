@@ -22,6 +22,7 @@ Serveur à lancer avant le client
 
 #define TAILLE_MAX_NOM 256
 #define NB_JOUEURS 5
+#define tousConnecte 0 //boolean qui contrôle si tout les joueurs sont connectés
 int lst_socket [NB_JOUEURS];
 
 typedef struct sockaddr sockaddr;
@@ -60,6 +61,31 @@ int ctrl_tab(int tab[],int longueur){
   return vretour;
 }
 
+
+int debut_partie(int socket){
+  char msg[100]; //stock les msg à envoyer au joueur courant
+
+   //contrôle pour l'affichage des msg de bienvenu et pour le démarrage de la partie
+    switch(ctrl_tab(&lst_socket, NB_JOUEURS))
+    {
+      case 0 :;
+         strcpy(msg,"Bienvenue dans le Pendu, vous êtes le premier connecté.\n"); 
+         break;
+      case NB_JOUEURS :;
+        strcpy(msg,"Bienvenue dans le Pendu, nous vous attendions.\n");
+        msg_all(socket," La partie va débuter!\n");   
+        break;
+      default : 
+        strcpy(msg,"Bienvenue dans le Pendu, nous attendons encore des joueurs pour débuter la partie.\n");
+    }
+    
+    write(socket, msg, sizeof(msg));
+  
+}
+
+
+
+
 //JEU DU PENDU pour l'utilisateur courant
 void pendu(int socket)
 {
@@ -70,20 +96,7 @@ void pendu(int socket)
     long i = 0; // Une petite variable pour parcourir les tableaux
     long tailleMot = 0;
     char msg[100]; //stock les msg à envoyer au joueur courant
-
-  //contrôle pour l'affichage des msg de bienvenu et pour le démarrage de la partie
-    switch(ctrl_tab(&lst_socket[i],NB_JOUEURS))
-    {
-      case 0 : msg="t"; break;
-      case 1: msg=""; break;
-      case NB_JOUEURS : msg=""; break;
-      default : msg="";
-    }
-    write(socket,msg,sizeof(msg));
-  
-    
-    //penser à ajouter un default
-    msg_all(socket,"Bienvenue dans le Pendu !\n\n");  
+   
     
     if (!piocherMot(motSecret))
         exit(0);
@@ -234,6 +247,7 @@ main(int argc, char **argv) {
     char 		machine[TAILLE_MAX_NOM+1]; 	/* nom de la machine locale */
     pthread_t thread_joueurs[NB_JOUEURS]; //Tableau contenant les threads des joueurs 
     int ret ;/* Retour Thread*/
+    enum etat{ debut, attente, proposition, fin}; // état du jeu
     
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
     
@@ -304,8 +318,8 @@ main(int argc, char **argv) {
         perror("erreur : impossible de créer le thread");
         exit(1);
       }
-      
-    
+
+
 		  /* traitement du message */
 		  printf("reception d'un message.\n");
 					
