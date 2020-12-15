@@ -46,9 +46,11 @@ int main(int argc, char **argv) {
     char 	buffer[256];
     char *	prog; 			/* nom du programme */
     char *	host; 			/* nom de la machine distante */
-    char *	mesg; 			/* message envoyé */
+    char * mesg; 			/* message envoyé */
+    char lettre;
     pthread_t thread_listen  ;
     char pseudo[32];
+    int etat; /* Variable état partie 0 -début 1 encours 2 fin*/
      
     if (argc != 3) {
 	perror("usage : client <adresse-serveur> <type_message>");
@@ -129,6 +131,10 @@ int main(int argc, char **argv) {
     }
 
     printf("Vous avez choisi le pseudo : %s !\n", pseudo);
+
+    printf("En attente d'autre joueurs...\n");
+    read(socket_descriptor,mesg,strlen(mesg));
+    printf("La partie commence ! \n");
     //Explication Pendu
     // A FAIRE
     printf("**************************\n");
@@ -144,14 +150,17 @@ int main(int argc, char **argv) {
         fgets(mesg, sizeof(mesg), stdin);
         mesg[strcspn(mesg, "\n")] = '\0';
 
+            //Si le jeu n'est pas fini, on envoie des lettres
+            scanf("%c",lettre);
+            mesg = lettre;
+
         /* envoi du message vers le serveur */
             if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
             perror("erreur : impossible d'ecrire le message destine au serveur.");
             exit(1);
             }
     }
-    printf("Vous quittez le Jeu du Pendu... Fermeture..");
-
+    printf("Vous quittez le Jeu du Pendu... Fermeture..\n");
    
     /* mise en attente du prgramme pour simuler un delai de transmission */
    // sleep(3);

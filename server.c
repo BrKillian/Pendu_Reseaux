@@ -39,7 +39,14 @@ pthread_t thread_pendu;
 
 //VARIABLE GLOBALE
 int nb_joueurs = 5 ;
+int nbj = 0;
 int sockets[5];
+int 	socket_descriptor ; 	/* descripteur de socket */
+int 	longueur; 		/* longueur d'un buffer utilisé */
+char 	buffer[256];
+int etat; /* Variable état partie 0 -début 1 encours 2 fin*/
+
+
 
 
 //JEU DU PENDU
@@ -71,8 +78,8 @@ void Pendu()
      n'a pas gagné */
     while (coupsRestants > 0 && !gagne(lettreTrouvee, tailleMot))
     {
-        printf("\n\nIl vous reste %ld coups a jouer", coupsRestants);
-        printf("\nQuel est le mot secret ? ");
+        printf("\n\nIl vous reste %ld coups a jouer \n", coupsRestants);
+        printf("\nQuel est le mot secret ? \n");
 
         /* On affiche le mot secret en masquant les lettres non trouvées
         Exemple : *A**ON */
@@ -84,7 +91,12 @@ void Pendu()
                 printf("*"); // Sinon, on affiche une étoile pour les lettres non trouvées
         }
 
-        printf("\nProposez une lettre : ");
+        printf("\nProposez une lettre : \n");
+        listen(socket_descriptor,1);
+
+
+        lettre = read(socket_descriptor, buffer, sizeof(buffer));
+        printf("message lu : %s \n", buffer);
         lettre = lireCaractere();
 
         // Si ce n'était PAS la bonne lettre
@@ -95,9 +107,9 @@ void Pendu()
     }
 
     if (gagne(lettreTrouvee, tailleMot))
-        printf("\n\nGagne ! Le mot secret etait bien : %s", motSecret);
+        printf("\n\nGagne ! Le mot secret etait bien : %s \n", motSecret);
     else
-        printf("\n\nPerdu ! Le mot secret etait : %s", motSecret);
+        printf("\n\nPerdu ! Le mot secret etait : %s \n", motSecret);
 
     free(lettreTrouvee); // On libère la mémoire allouée manuellement (par malloc)
  
@@ -259,27 +271,66 @@ main(int argc, char **argv) {
     listen(socket_descriptor,5);
 
     /* attente des connexions et traitement des donnees recues */
-    for(;;) {
+    //TANT QUE On est pas 5
+        /*
+        On accepte les clients qui se connecte
+
+        Si on est 5, on envoie un message à chaque client pour dire que la partie à commencer
+
+        */
+printf("ça passe ici : avant while \n");
+    while(nbj < 2 )
+    {
+        printf("ça passe la : debut while \n");
     
 		longueur_adresse_courante = sizeof(adresse_client_courant);
-		
+
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
 		if ((nouv_socket_descriptor = 
 			accept(socket_descriptor, 
 			       (sockaddr*)(&adresse_client_courant),
 			       &longueur_adresse_courante))
-			 < 0) {
+			 < 0)
+         {
 			perror("erreur : impossible d'accepter la connexion avec le client.");
 			exit(1);
 		}
-		
+        sockets[nbj]=nouv_socket_descriptor;
+         nbj++;
+         printf("Nombre de joueurs : %d \n",nbj);
+         printf("Socket rejoint : %s \n", sockets[nbj]);
+    }
+
+    for(int i = 0; i < nbj; i++)
+    {
+        char * mesg = "001";
+        //On envoie un message sur le socket i
+        write(sockets[i],mesg,strlen(mesg)+1);
+    
+    }
+    	//Chaque joueur va pouvoir jouer
+        //Changer l'état de la partie en Encours
+        //Le serveur crée un thread par joueur
+            //Dans le thread du joueur : J'ecoute le socket, j'interprete le message client
+/*
+    Tant que état encours (Etat partagé par tous les threads)
+
+        Read/Switch
+
+        Si mesg = 1 alors je recup une lettre
+            Je regarde si la lettre a déjà été proposé 
+                -> Afficher lettre dejà proposé
+            Sinon
+                -> Est ce que cette lettre est comprise dans mon mot
+                    Si mot complet alors Etat: Fini
+                    Sinon actualiser le mot et prevenir tout le monde "Lettre trouvée"
+
+*/
+
 		/* traitement du jeu du pendu */
-		printf("reception d'un message.\n");
+		printf("reception d'un prout.\n");
 		
-		Pendu();
+		  Pendu();
 						
 		close(nouv_socket_descriptor);
-		
-    }
-    
 }
