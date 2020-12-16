@@ -1,12 +1,3 @@
-/*
-Jeu du pendu
-
-dico.c
-------
-
-Ces fonctions piochent au hasard un mot dans un fichier dictionnaire
-pour le jeu du pendu
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +6,7 @@ pour le jeu du pendu
 
 #include "dico.h"
 
-
+//piocher un mot depuis le fichier dico.txt
 int piocherMot(char *motPioche)
 {
     FILE* dico = NULL; // Le pointeur de fichier qui va contenir notre fichier
@@ -23,8 +14,8 @@ int piocherMot(char *motPioche)
     int caractereLu = 0;
     dico = fopen("dico.txt", "r"); // On ouvre le dictionnaire en lecture seule
 
-    // On v�rifie si on a r�ussi � ouvrir le dictionnaire
-    if (dico == NULL) // Si on n'a PAS r�ussi � ouvrir le fichier
+    // On vérifie si on a réussi à ouvrir le dictionnaire
+    if (dico == NULL) // Si on n'a PAS réussi à ouvrir le fichier
     {
         printf("\nImpossible de charger le dictionnaire de mots");
         return 0; // On retourne 0 pour indiquer que la fonction a �chou�
@@ -32,7 +23,7 @@ int piocherMot(char *motPioche)
     }
 
     // On compte le nombre de mots dans le fichier (il suffit de compter les
-    // entr�es \n
+    // entrees \n
     do
     {
         caractereLu = fgetc(dico);
@@ -42,7 +33,7 @@ int piocherMot(char *motPioche)
 
     numMotChoisi = nombreAleatoire(nombreMots); // On pioche un mot au hasard
 
-    // On recommence � lire le fichier depuis le d�but. On s'arr�te lorsqu'on est arriv�s au bon mot
+    // On recommence a lire le fichier depuis le debut. On s'arrete lorsqu'on est arrives au bon mot
     rewind(dico);
     while (numMotChoisi > 0)
     {
@@ -51,15 +42,15 @@ int piocherMot(char *motPioche)
             numMotChoisi--;
     }
 
-    /* Le curseur du fichier est positionn� au bon endroit.
-    On n'a plus qu'� faire un fgets qui lira la ligne */
+    /* Le curseur du fichier est positionne au bon endroit.
+    On n'a plus qu'a faire un fgets qui lira la ligne */
     fgets(motPioche, 100, dico);
 
     // On vire l'\n � la fin
     motPioche[strlen(motPioche) - 1] = '\0';
     fclose(dico);
 
-    return 1; // Tout s'est bien pass�, on retourne 1
+    return 1; // Tout s'est bien passe, on retourne 1
 }
 
 int nombreAleatoire(int nombreMax)
