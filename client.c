@@ -119,17 +119,11 @@ int main(int argc, char **argv) {
     pseudo[strcspn(pseudo, "\n")] = '\0';
     if ((write(socket_descriptor,pseudo,strlen(pseudo)))< 0){
         perror("erreur : impossible d'écrire le message destine au serveur.");
+        exit(1);
     }
     mesg = pseudo;
 
     printf("envoi d'un message au serveur. \n");
-      
-    /* envoi du psuedo vers le serveur */
-    if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
-	perror("erreur : impossible d'ecrire le message destine au serveur.");
-	exit(1);
-    }
-
     printf("Vous avez choisi le pseudo : %s !\n", pseudo);
 
     printf("En attente d'autre joueurs...\n");

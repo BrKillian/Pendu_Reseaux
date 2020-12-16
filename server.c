@@ -10,13 +10,10 @@ Serveur à lancer avant le client
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
-
 #include <ctype.h>
 #include <string.h>
-
 #include "dico.c"
 #include "dico.h"
-
 #include <netdb.h> 		/* pour hostent, servent */
 
 
@@ -56,6 +53,7 @@ char lireCaractere(char  caractere);
 void pendu(struct Sthread * param);
 void msg_all(int socks[], char * message);
 
+//fonction pour msg à tous les joueurs
 void msg_all(int socks[5],char * msg){
   for(int i =0;i< nb_joueurs ; i++){
     write(socks[i],msg,strlen(msg));
@@ -87,8 +85,8 @@ void pendu(struct Sthread * param)
     }
     
     struct Sthread * params = param;
-    printf("numéro joueur courant %d\n\n",(* params).numJoueur);
-    printf("etat du joueur courant %d\n\n",(* params).etat);
+    printf("numéro joueur courant %ls\n\n",(* params).numJoueur);
+    printf("etat du joueur courant %ls\n\n",(* params).etat);
      //début du programme 
     while((* params).etat == 0){
         read((* params).socket,buffer,sizeof(buffer));
@@ -130,9 +128,9 @@ void pendu(struct Sthread * param)
                     
             }  
             strcpy(buffer,"\nProposez une lettre : \n");
-            write((* params).socket ,buffer,strlen(buffer)+1);
+            write(( * params).socket ,buffer,strlen(buffer)+1);
 
-            listen((* params).socket,1);
+            listen(( * params).socket,1);
 
             lettre = read((* params).socket, buffer, 1);
             strcpy(buffer,("message lu : %s \n", buffer));
@@ -220,7 +218,6 @@ main(int argc, char **argv) {
     servent*		ptr_service; 			/* les infos recuperees sur le service de la machine */
     char 		machine[TAILLE_MAX_NOM+1]; 	/* nom de la machine locale */
     pthread_t threads[nb_joueurs];  // tableau des threads
-    int ret ;/* Retour Thread*/
     
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
     
@@ -273,11 +270,9 @@ main(int argc, char **argv) {
     listen(socket_descriptor,nb_joueurs);
 
     pthread_t thread_joueur;
-    printf("ça passe ici : avant while \n");
+    printf("debug : avant while \n");
     while((nbj < nb_joueurs ) || (finJeu == 0))
     {
-        printf("re modif: debut while \n");
-    
 		longueur_adresse_courante = sizeof(adresse_client_courant);
 
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
@@ -294,7 +289,6 @@ main(int argc, char **argv) {
         nbj++;
         
         printf("Nombre de joueurs : %d \n",nbj);
-        printf("Socket rejoint : %s \n", sockets[nbj]);
 
         //création des paramètres pour les joueurs
         struct Sthread params = {&sockets[nbj],0," ",nbj}; 
@@ -304,7 +298,6 @@ main(int argc, char **argv) {
             perror("erreur : impossible d'accepter la connexion avec le client. \n");
            exit(1);
         }
-         
     }
 
     for(int i=0; i< nb_joueurs;i++){

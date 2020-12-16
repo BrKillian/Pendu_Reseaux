@@ -19,7 +19,7 @@ pour le jeu du pendu
 int piocherMot(char *motPioche)
 {
     FILE* dico = NULL; // Le pointeur de fichier qui va contenir notre fichier
-    int nombreMots = 0, numMotChoisi = 0, i = 0;
+    int nombreMots = 0, numMotChoisi = 0;
     int caractereLu = 0;
     dico = fopen("dico.txt", "r"); // On ouvre le dictionnaire en lecture seule
 
