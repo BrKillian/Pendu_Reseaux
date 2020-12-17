@@ -85,8 +85,9 @@ void pendu(struct Sthread * param)
     }
     
     struct Sthread * params = param;
-    printf("numéro joueur courant %ls\n\n",(* params).numJoueur);
-    printf("etat du joueur courant %ls\n\n",(* params).etat);
+    //printf("numéro joueur courant %ls\n\n",(* params).numJoueur);
+    //printf("etat du joueur courant %ls\n\n",(* params).etat);
+
      //début du programme 
     while((* params).etat == 0){
         read((* params).socket,buffer,sizeof(buffer));
@@ -99,7 +100,7 @@ void pendu(struct Sthread * param)
             (* params).etat = 1;
         }
     }
-         printf("après création pseudo\n"); // DEBUG
+         //printf("après création pseudo\n"); // DEBUG
 
     while((* params).etat == 1){
         // On continue à jouer tant qu'il reste au moins un coup à jouer ou qu'on à pas gagner
@@ -159,7 +160,7 @@ void pendu(struct Sthread * param)
             } 
         }
     }
-    printf("après fin jeu \n"); // DEBUG
+    //printf("après fin jeu \n"); // DEBUG
     
 }
 
@@ -270,7 +271,7 @@ main(int argc, char **argv) {
     listen(socket_descriptor,nb_joueurs);
 
     pthread_t thread_joueur;
-    printf("debug : avant while \n");
+    //printf("debug : avant while \n");
     while((nbj < nb_joueurs ) || (finJeu == 0))
     {
 		longueur_adresse_courante = sizeof(adresse_client_courant);
@@ -292,7 +293,7 @@ main(int argc, char **argv) {
 
         //création des paramètres pour les joueurs
         struct Sthread params = {&sockets[nbj],0," ",nbj}; 
-        printf("création params\n"); // DEBUG
+        //printf("création params\n"); // DEBUG
 
         if(threads[nbj] = pthread_create(&thread_joueur,NULL,pendu, &params) < 0){
             perror("erreur : impossible d'accepter la connexion avec le client. \n");
