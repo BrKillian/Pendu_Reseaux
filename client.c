@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 
     printf("En attente d'autre joueurs...\n");
     read(socket_descriptor,mesg,strlen(mesg));
-    printf("La partie commence ! \n");
+    printf("Message reçu du serveur %s\n",mesg);
     //Explication Pendu
     // A FAIRE
     printf("**************************\n");
