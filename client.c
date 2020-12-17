@@ -36,24 +36,14 @@ static void * ecoute (void * socket_descriptor){
                 break;
 
             case '1': // affichage mot secret
-            
+                printf("Mot secret : %s \n", &buffer[1]);
                 break; 
             case '2'://proposer lettre
-            /*
-                fgets(mesg, sizeof(mesg), stdin);
-                 mesg[strcspn(mesg, "\n")] = '\0';
-
-                //Si le jeu n'est pas fini, on envoie des lettres
-                scanf("%c",lettre);
-                mesg = lettre;
-
-                if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
-                    perror("erreur : impossible d'ecrire le message destine au serveur.");
-                    exit(1);
-                }
-            */
+                printf("Mot secret : %s \n",&buffer[1]);
+                etat=2;
                 break;
             default:
+                break;
         }
         
 
@@ -163,6 +153,18 @@ int main(int argc, char **argv) {
     //Tant que les messages émis sont différents de "quit"
     while(strcmp(mesg,"quit")!='\0'){
 
+        if(etat == 2){
+            printf("ffefe");
+            fgets(mesg,sizeof(mesg),stdin);
+            printf("feffev");
+            mesg[strcspn(mesg, "\n")] = '\0';
+
+            if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
+                perror("erreur : impossible d'ecrire le message destine au serveur.");
+                exit(1);
+            }
+        }
+        /*
         fgets(mesg, sizeof(mesg), stdin);
         mesg[strcspn(mesg, "\n")] = '\0';
 
@@ -170,11 +172,12 @@ int main(int argc, char **argv) {
             scanf("%c",lettre);
             mesg = lettre;
 
-        /* envoi du message vers le serveur */
+      
             if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
             perror("erreur : impossible d'ecrire le message destine au serveur.");
             exit(1);
             }
+        */
     }
     printf("Vous quittez le Jeu du Pendu... Fermeture..\n");
    

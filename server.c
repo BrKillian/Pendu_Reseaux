@@ -70,11 +70,10 @@ void * pendu(void * params)
 
     printf("Un nouveau joueur a rejoint la partie !\n\n");
 
-    printf("Pseudo ok = %d\n",*(*param).pseudoOK);
+    printf("Debug :  Pseudo ok = %d\n",*(*param).pseudoOK);
    
      //début du programme 
     while(pseudoEnvoye == 0){
-        //printf("avant read %d\n",(*param).socket);
         read((* param).socket,buffer,sizeof(buffer));
         strcpy(pseudo,buffer);
         printf("Pseudo du joueur : %s\n",pseudo);
@@ -82,20 +81,21 @@ void * pendu(void * params)
         printf("Pseudo ok dans while %d\n",*(*param).pseudoOK);
         pseudoEnvoye=1;   
     }
-    printf("Pseudo ok après while = %d\n",*(*param).pseudoOK);
+    printf("Debug : Pseudo ok après while = %d\n",*(*param).pseudoOK);
             
     while(*(* param).etat == 0){
-        printf("Dans boucle état == 0 ");
+        printf("Debug :  Dans boucle état == 0 ");
     }
         
     while(*(* param).etat == 1){
         // On continue à jouer tant qu'il reste au moins un coup à jouer ou qu'on à pas gagner
         while (coupsRestants > 0 && !gagne(lettreTrouvee, tailleMot))
         {
-            char coups[3] ;
-            itoa(coupsRestants,coups,10);
-            char  msg[64] = ("Il reste");
-            write((* param).socket ,msg,strlen(msg));
+           //envoi des coups restants au client
+            char msg[3] = ("0a");
+            msg[1]=(char) coupsRestants;
+            write((* param).socket ,msg,sizeof(msg));
+            
 
             strcpy(msg,("\nQuel est le mot secret ? \n"));
             write((* param).socket ,msg,strlen(msg));
@@ -104,15 +104,17 @@ void * pendu(void * params)
             // On affiche le mot secret en masquant les lettres non trouvées 
             for (i = 0 ; i < tailleMot ; i++)
             {
-                // Si on a trouvé la lettre n° i
+                // Si on a trouvé la lettre n° i précedemment
+                //KILLIAN ICI
                 if (lettreTrouvee[i]) {
-                    strcpy(buffer,("%c", motSecret[i]));
-                    write((* param).socket ,buffer,strlen(buffer)+1);
+                    //("%c", motSecret[i])
+                   // write((* param).socket ,buffer,strlen(buffer)+1);
                 }
                 else{
                     strcpy(buffer,"*");
                     write((* param).socket ,buffer,strlen(buffer)+1);
                 }
+                char affMot[]= "";
                     
             }  
             strcpy(buffer,"\nProposez une lettre : \n");
@@ -298,7 +300,6 @@ main(int argc, char **argv) {
         threads[nbj] = pthread_create(&thread_joueur, NULL, &pendu, &params[nbj]);
         nbj++;
     }
-
 
     while(pseudoOK != nb_joueurs);  
     printf("début du jeu \n");
