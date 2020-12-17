@@ -10,129 +10,154 @@ Serveur à lancer avant le client
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
-
 #include <ctype.h>
 #include <string.h>
-
 #include "dico.c"
 #include "dico.h"
-
 #include <netdb.h> 		/* pour hostent, servent */
-#include <string.h> 		/* pour bcopy, ... */  
+
 
 #define TAILLE_MAX_NOM 256
-#define NB_JOUEURS 5
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-
+struct Sthread{
+    int socket; // le socket géré 
+    int * etat; /* Variable état partie 0 -début 1 encours 2 fin*/
+    int numJoueur; // pointeur vers num du joueur
+    int * pseudoOK;
+}typedef thread;
 
 
 //VARIABLE GLOBALE
-int nb_joueurs = 5 ;
+int nb_joueurs = 2 ;
 int nbj = 0;
-int sockets[5];
+int sockets[2];
 int 	socket_descriptor ; 	/* descripteur de socket */
 int 	longueur; 		/* longueur d'un buffer utilisé */
-char 	buffer[256];
-int etat; /* Variable état partie 0 -début 1 encours 2 fin*/
-
-
+char motSecret[100] = {0}; // Ce sera le mot à trouver
+long tailleMot = 0;
+int *lettreTrouvee = NULL; // Un tableau de booléens. Chaque case correspond à une lettre du mot secret. 0 = lettre non trouvée, 1 = lettre trouvée
+int finJeu = 0;
+long coupsRestants = 10; // Compteur de coups restants (0 = mort)
 
 //DECLARATION DE FONCTION
 int gagne(int lettreTrouvee[], long tailleMot);
 int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);
-char lireCaractere();
-void pendu();
-void message_global(int socks[], char * message);
+char lireCaractere(char  caractere);
+void * pendu(void * params);
+void msg_all(int socks[], char * message);
 
-
+//fonction pour msg à tous les joueurs
 void msg_all(int socks[5],char * msg){
-  for(int i =0;i< NB_JOUEURS ; i++){
+  for(int i =0;i< nb_joueurs ; i++){
     write(socks[i],msg,strlen(msg));
   }
 }
 
-//JEU DU PENDU
-
-void pendu()
+void * pendu(void * params)
 {
+    thread * param = params;
     char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
-    char motSecret[100] = {0}; // Ce sera le mot à trouver
-    int *lettreTrouvee = NULL; // Un tableau de booléens. Chaque case correspond à une lettre du mot secret. 0 = lettre non trouvée, 1 = lettre trouvée
-    long coupsRestants = 10; // Compteur de coups restants (0 = mort)
-    long i = 0; // Une petite variable pour parcourir les tableaux
-    long tailleMot = 0;
-
-    printf("Bienvenue dans le Pendu !\n\n");
-
-    if (!piocherMot(motSecret))
-        exit(0);
-
-    tailleMot = strlen(motSecret);
-    lettreTrouvee = malloc(tailleMot * sizeof(int)); // On alloue dynamiquement le tableau lettreTrouvee (dont on ne connaissait pas la taille au départ)
+    long i = 0; // variable pour parcourir les tableaux
+    char pseudo[32];
+    int pseudoEnvoye=0;
+    char buffer[256];
     
-    if (lettreTrouvee == NULL)
-        exit(0);
 
-    for (i = 0 ; i < tailleMot ; i++)
-        lettreTrouvee[i] = 0;
+    printf("Un nouveau joueur a rejoint la partie !\n\n");
 
-    /* On continue à jouer tant qu'il reste au moins un coup à jouer ou qu'on
-     n'a pas gagné */
-    while (coupsRestants > 0 && !gagne(lettreTrouvee, tailleMot))
-    {
-        printf("\n\nIl vous reste %ld coups a jouer \n", coupsRestants);
-        printf("\nQuel est le mot secret ? \n");
-
-        /* On affiche le mot secret en masquant les lettres non trouvées
-        Exemple : *A**ON */
-        for (i = 0 ; i < tailleMot ; i++)
+    printf("Debug :  Pseudo ok = %d\n",*(*param).pseudoOK);
+   
+     //début du programme 
+    while(pseudoEnvoye == 0){
+        read((* param).socket,buffer,sizeof(buffer));
+        strcpy(pseudo,buffer);
+        printf("Pseudo du joueur : %s\n",pseudo);
+        (*(*param).pseudoOK) += 1;
+        printf("Pseudo ok dans while %d\n",*(*param).pseudoOK);
+        pseudoEnvoye=1;   
+    }
+    printf("Debug : Pseudo ok après while = %d\n",*(*param).pseudoOK);
+            
+    while(*(* param).etat == 0){
+        printf("Debug :  Dans boucle état == 0 ");
+    }
+        
+    while(*(* param).etat == 1){
+        // On continue à jouer tant qu'il reste au moins un coup à jouer ou qu'on à pas gagner
+        while (coupsRestants > 0 && !gagne(lettreTrouvee, tailleMot))
         {
-            if (lettreTrouvee[i]) // Si on a trouvé la lettre n° i
-                printf("%c", motSecret[i]); // On l'affiche
-            else
-                printf("*"); // Sinon, on affiche une étoile pour les lettres non trouvées
-        }
+           //envoi des coups restants au client
+            char msg[3] = ("0a");
+            msg[1]=(char) coupsRestants;
+            write((* param).socket ,msg,sizeof(msg));
+            
 
-        printf("\nProposez une lettre : \n");
-        listen(socket_descriptor,1);
+            strcpy(msg,("\nQuel est le mot secret ? \n"));
+            write((* param).socket ,msg,strlen(msg));
+            
 
+            // On affiche le mot secret en masquant les lettres non trouvées 
+            for (i = 0 ; i < tailleMot ; i++)
+            {
+                // Si on a trouvé la lettre n° i précedemment
+                //KILLIAN ICI
+                if (lettreTrouvee[i]) {
+                    //("%c", motSecret[i])
+                   // write((* param).socket ,buffer,strlen(buffer)+1);
+                }
+                else{
+                    strcpy(buffer,"*");
+                    write((* param).socket ,buffer,strlen(buffer)+1);
+                }
+                char affMot[]= "";
+                    
+            }  
+            strcpy(buffer,"\nProposez une lettre : \n");
+            write(( * param).socket ,buffer,strlen(buffer)+1);
 
-        lettre = read(socket_descriptor, buffer, sizeof(buffer));
-        printf("message lu : %s \n", buffer);
-        lettre = lireCaractere();
+            listen(( * param).socket,1);
 
-        // Si ce n'était PAS la bonne lettre
-        if (!rechercheLettre(lettre, motSecret, lettreTrouvee))
-        {
-            coupsRestants--; // On enlève un coup au joueur
+            lettre = read((* param).socket, buffer, 1);
+            strcpy(buffer,("message lu : %s \n", buffer));
+            write((* param).socket ,buffer,strlen(buffer)+1);
+            lettre = lireCaractere(lettre);
+
+            // Si ce n'était PAS la bonne lettre
+            if (!rechercheLettre(lettre, motSecret, lettreTrouvee))
+            {
+                coupsRestants--; 
+            }
+
+            if (gagne(lettreTrouvee, tailleMot)){
+                strcpy(buffer,("\n\nGagne ! Le mot secret etait bien : %s \n", motSecret));
+                msg_all(sockets,buffer);
+                finJeu = 1;
+                //libération mémoire du tableau alloué
+                free(lettreTrouvee);
+            }
+            else{
+                strcpy(buffer,("\n\nPerdu ! Le mot secret etait : %s \n", motSecret));
+                msg_all(sockets,buffer);
+                finJeu = 1;
+                //libération mémoire du tableau alloué
+                 free(lettreTrouvee);
+            } 
         }
     }
-
-    if (gagne(lettreTrouvee, tailleMot))
-        printf("\n\nGagne ! Le mot secret etait bien : %s \n", motSecret);
-    else
-        printf("\n\nPerdu ! Le mot secret etait : %s \n", motSecret);
-
-    free(lettreTrouvee); // On libère la mémoire allouée manuellement (par malloc)
- 
+    //printf("après fin jeu \n"); // DEBUG
+    return NULL;
 }
 
-char lireCaractere()
+char lireCaractere(char caractere)
 {
-    char caractere = 0;
-
-    caractere = getchar(); // On lit le premier caractère
-    caractere = toupper(caractere); // On met la lettre en majuscule si elle ne l'est pas déjà
-
-    // On lit les autres caractères mémorisés un à un jusqu'au \n
-    while (getchar() != '\n') ;
-
-    return caractere; // On retourne le premier caractère qu'on a lu
+    //On met la lettre en majuscule si elle ne l'est pas déjà
+        caractere = toupper(caractere); 
+    return caractere; 
 }
 
 
@@ -170,46 +195,11 @@ char lireCaractere()
     }
     
 
-
-
-/*void renvoi (int sock) {
-
-    char buffer[256];
-    int longueur;
-   
-    if ((longueur = read(sock, buffer, sizeof(buffer))) <= 0) 
-    	return;
-    
-    printf("message lu : %s \n", buffer);
-    
-    buffer[0] = 'R';
-    buffer[1] = 'E';
-    buffer[longueur] = '#';
-    buffer[longueur+1] ='\0';
-    
-    printf("message apres traitement : %s \n", buffer);
-    
-    printf("renvoi du message traite.\n");
-
-    // mise en attente du prgramme pour simuler un delai de transmission 
-    sleep(3);
-    
-    write(sock,buffer,strlen(buffer)+1);
-    
-    printf("message envoye. \n");
-        
-    return;
-    
-}*/
-
-
-/*------------------------------------------------------*/
-
 /*------------------------------------------------------*/
 main(int argc, char **argv) {
   
     int 		socket_descriptor, 		/* descripteur de socket */
-			nouv_socket_descriptor[NB_JOUEURS], 	/* [nouveau] descripteur de socket */
+			nouv_socket_descriptor, 	/* [nouveau] descripteur de socket */
 			longueur_adresse_courante; 	/* longueur d'adresse courante d'un client */
 
     sockaddr_in 	adresse_locale, 		/* structure d'adresse locale*/
@@ -217,10 +207,11 @@ main(int argc, char **argv) {
     hostent*		ptr_hote; 			/* les infos recuperees sur la machine hote */
     servent*		ptr_service; 			/* les infos recuperees sur le service de la machine */
     char 		machine[TAILLE_MAX_NOM+1]; 	/* nom de la machine locale */
-    pthread_t thread_joueurs[NB_JOUEURS]; //Tableau contenant les threads des joueurs 
-    int ret ;/* Retour Thread*/
-    
+    pthread_t threads[nb_joueurs];  // tableau des threads
+    int etat=0;
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
+    thread params[nb_joueurs] ;
+    int pseudoOK = 0;
     
     /* recuperation de la structure d'adresse en utilisant le nom */
     if ((ptr_hote = gethostbyname(machine)) == NULL) {
@@ -268,21 +259,27 @@ main(int argc, char **argv) {
     }
     
     /* initialisation de la file d'ecoute */
-    listen(socket_descriptor,NB_JOUEURS);
+    listen(socket_descriptor,nb_joueurs);
 
-    /* attente des connexions et traitement des donnees recues */
-    //TANT QUE On est pas 5
-        /*
-        On accepte les clients qui se connecte
+    //pioche un mot aléatoire pour le jeu
+    if (!piocherMot(motSecret))
+        exit(0);
 
-        Si on est 5, on envoie un message à chaque client pour dire que la partie à commencer
+        tailleMot = strlen(motSecret);
+        lettreTrouvee = malloc(tailleMot * sizeof(int));    
+        if (lettreTrouvee == NULL)
+            exit(0);
 
-        */
-printf("ça passe ici : avant while \n");
-    while(nbj < 2 )
+        for (int i = 0 ; i < tailleMot ; i++){
+            lettreTrouvee[i] = 0;
+        }    
+        printf("mot piocher !\n\n");
+
+
+    pthread_t thread_joueur;
+    //printf("debug : avant while \n");
+    while((nbj < nb_joueurs ))
     {
-        printf("ça passe la : debut while \n");
-    
 		longueur_adresse_courante = sizeof(adresse_client_courant);
 
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
@@ -296,41 +293,21 @@ printf("ça passe ici : avant while \n");
 			exit(1);
 		}
         sockets[nbj]=nouv_socket_descriptor;
-         nbj++;
-         printf("Nombre de joueurs : %d \n",nbj);
-         printf("Socket rejoint : %s \n", sockets[nbj]);
+        printf("Nombre de joueurs : %d \n",nbj);
+        
+        //création des paramètres pour les joueurs
+        params[nbj] = (thread) {nouv_socket_descriptor,&etat,nbj,&pseudoOK}; 
+        threads[nbj] = pthread_create(&thread_joueur, NULL, &pendu, &params[nbj]);
+        nbj++;
     }
 
-    for(int i = 0; i < nbj; i++)
-    {
-        char * mesg = "001";
-        //On envoie un message sur le socket i
-        write(sockets[i],mesg,strlen(mesg)+1);
-    
+    while(pseudoOK != nb_joueurs);  
+    printf("début du jeu \n");
+    etat=1;
+    while((finJeu == 0));
+
+    for(int i=0; i< nb_joueurs;i++){
+        close(sockets[i]);
     }
-    	//Chaque joueur va pouvoir jouer
-        //Changer l'état de la partie en Encours
-        //Le serveur crée un thread par joueur
-            //Dans le thread du joueur : J'ecoute le socket, j'interprete le message client
-/*
-    Tant que état encours (Etat partagé par tous les threads)
 
-        Read/Switch
-
-        Si mesg = 1 alors je recup une lettre
-            Je regarde si la lettre a déjà été proposé 
-                -> Afficher lettre dejà proposé
-            Sinon
-                -> Est ce que cette lettre est comprise dans mon mot
-                    Si mot complet alors Etat: Fini
-                    Sinon actualiser le mot et prevenir tout le monde "Lettre trouvée"
-
-*/
-
-		/* traitement du jeu du pendu */
-		printf("reception d'un prout.\n");
-		
-		  Pendu();
-						
-		close(nouv_socket_descriptor);
 }

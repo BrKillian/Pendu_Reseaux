@@ -19,6 +19,7 @@ typedef struct sockaddr_in 	sockaddr_in;
 typedef struct hostent 		hostent;
 typedef struct servent 		servent;
 
+int etat; /* Variable état partie 0 -début 1 encours 2 fin*/
 
 //Fonction écoute
 //Le client reste à l'écoute du serveur
@@ -27,10 +28,30 @@ static void * ecoute (void * socket_descriptor){
     char buffer[256];
     int taille;
     while(1){
-        if((taille = read(*socket, buffer, (int)sizeof(buffer)))<=0)
-            exit(1);
-        buffer[taille]='\0';
-        printf("%s \n", buffer);
+        read(*socket, buffer, (int)sizeof(buffer));
+
+        switch(buffer[0]){
+            case '0':   //il reste x coup à jouer
+                printf("Il reste %s coup(s) à jouer \n", &buffer[1]);
+                break;
+
+            case '1': // affichage mot secret
+                printf("Mot secret : %s \n", &buffer[1]);
+                break; 
+            case '2'://proposer lettre
+                printf("Mot secret : %s \n",&buffer[1]);
+                etat=2;
+                break;
+            default:
+                break;
+        }
+        
+
+
+        if(strcmp(buffer,"start")== 0)
+            etat=1;
+        else
+         printf("%s \n", buffer);
     }
 
 }
@@ -50,7 +71,7 @@ int main(int argc, char **argv) {
     char lettre;
     pthread_t thread_listen  ;
     char pseudo[32];
-    int etat; /* Variable état partie 0 -début 1 encours 2 fin*/
+    
      
     if (argc != 3) {
 	perror("usage : client <adresse-serveur> <type_message>");
@@ -119,27 +140,12 @@ int main(int argc, char **argv) {
     pseudo[strcspn(pseudo, "\n")] = '\0';
     if ((write(socket_descriptor,pseudo,strlen(pseudo)))< 0){
         perror("erreur : impossible d'écrire le message destine au serveur.");
+        exit(1);
     }
-    mesg = pseudo;
-
-    printf("envoi d'un message au serveur. \n");
-      
-    /* envoi du psuedo vers le serveur */
-    if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
-	perror("erreur : impossible d'ecrire le message destine au serveur.");
-	exit(1);
-    }
-
+    
     printf("Vous avez choisi le pseudo : %s !\n", pseudo);
 
     printf("En attente d'autre joueurs...\n");
-    read(socket_descriptor,mesg,strlen(mesg));
-    printf("La partie commence ! \n");
-    //Explication Pendu
-    // A FAIRE
-    printf("**************************\n");
-    printf("****** REGLE DU JEU ******\n");
-    printf("**************************\n");
 
     // Le client se met en maintenant en écoute
     pthread_create(&thread_listen,NULL, ecoute, &socket_descriptor);
@@ -147,6 +153,18 @@ int main(int argc, char **argv) {
     //Tant que les messages émis sont différents de "quit"
     while(strcmp(mesg,"quit")!='\0'){
 
+        if(etat == 2){
+            printf("ffefe");
+            fgets(mesg,sizeof(mesg),stdin);
+            printf("feffev");
+            mesg[strcspn(mesg, "\n")] = '\0';
+
+            if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
+                perror("erreur : impossible d'ecrire le message destine au serveur.");
+                exit(1);
+            }
+        }
+        /*
         fgets(mesg, sizeof(mesg), stdin);
         mesg[strcspn(mesg, "\n")] = '\0';
 
@@ -154,11 +172,12 @@ int main(int argc, char **argv) {
             scanf("%c",lettre);
             mesg = lettre;
 
-        /* envoi du message vers le serveur */
+      
             if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
             perror("erreur : impossible d'ecrire le message destine au serveur.");
             exit(1);
             }
+        */
     }
     printf("Vous quittez le Jeu du Pendu... Fermeture..\n");
    
