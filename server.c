@@ -48,7 +48,7 @@ long coupsRestants = 10; // Compteur de coups restants (0 = mort)
 int gagne(int lettreTrouvee[], long tailleMot);
 int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[]);
 char lireCaractere(char  caractere);
-void pendu(thread * param);
+void * pendu(void * params);
 void msg_all(int socks[], char * message);
 
 //fonction pour msg à tous les joueurs
@@ -58,8 +58,9 @@ void msg_all(int socks[5],char * msg){
   }
 }
 
-void pendu(thread * param)
+void * pendu(void * params)
 {
+    thread * param = params;
     char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
     long i = 0; // variable pour parcourir les tableaux
     char pseudo[32];
@@ -69,7 +70,7 @@ void pendu(thread * param)
 
     printf("Un nouveau joueur a rejoint la partie !\n\n");
 
-    //printf("avant while pseudo \n");
+    printf("Pseudo ok = %d\n",*(*param).pseudoOK);
    
      //début du programme 
     while(pseudoEnvoye == 0){
@@ -77,26 +78,27 @@ void pendu(thread * param)
         read((* param).socket,buffer,sizeof(buffer));
         strcpy(pseudo,buffer);
         printf("Pseudo du joueur : %s\n",pseudo);
-        *(*param).pseudoOK ++;
-        //printf("%d\n",*(*param).pseudoOK);
+        (*(*param).pseudoOK) += 1;
+        printf("Pseudo ok dans while %d\n",*(*param).pseudoOK);
         pseudoEnvoye=1;   
     }
-    //printf("après while pseudo \n");
-    strcpy(buffer,("\nQuel est le mot secret ? \n"));
-    write((* param).socket ,buffer,strlen(buffer)+1);
+    printf("Pseudo ok après while = %d\n",*(*param).pseudoOK);
             
-    while(*(* param).etat == 0);
+    while(*(* param).etat == 0){
+        printf("Dans boucle état == 0 ");
+    }
         
     while(*(* param).etat == 1){
         // On continue à jouer tant qu'il reste au moins un coup à jouer ou qu'on à pas gagner
         while (coupsRestants > 0 && !gagne(lettreTrouvee, tailleMot))
         {
+            char coups[3] ;
+            itoa(coupsRestants,coups,10);
+            char  msg[64] = ("Il reste");
+            write((* param).socket ,msg,strlen(msg));
 
-            strcpy(buffer,("\n\nIl vous reste %ld coups a jouer \n", coupsRestants));
-            write((* param).socket ,buffer,strlen(buffer)+1);
-
-            strcpy(buffer,("\nQuel est le mot secret ? \n"));
-            write((* param).socket ,buffer,strlen(buffer)+1);
+            strcpy(msg,("\nQuel est le mot secret ? \n"));
+            write((* param).socket ,msg,strlen(msg));
             
 
             // On affiche le mot secret en masquant les lettres non trouvées 
@@ -146,7 +148,7 @@ void pendu(thread * param)
         }
     }
     //printf("après fin jeu \n"); // DEBUG
-    
+    return NULL;
 }
 
 char lireCaractere(char caractere)
@@ -207,7 +209,7 @@ main(int argc, char **argv) {
     int etat=0;
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
     thread params[nb_joueurs] ;
-    int pseudoOK= 0;
+    int pseudoOK = 0;
     
     /* recuperation de la structure d'adresse en utilisant le nom */
     if ((ptr_hote = gethostbyname(machine)) == NULL) {
@@ -293,10 +295,7 @@ main(int argc, char **argv) {
         
         //création des paramètres pour les joueurs
         params[nbj] = (thread) {nouv_socket_descriptor,&etat,nbj,&pseudoOK}; 
-        if(threads[nbj] = pthread_create(&thread_joueur, NULL, pendu, &params[nbj]) < 0){
-            perror("erreur : impossible d'accepter la connexion avec le client. \n");
-           exit(1);
-        }
+        threads[nbj] = pthread_create(&thread_joueur, NULL, &pendu, &params[nbj]);
         nbj++;
     }
 
