@@ -19,69 +19,84 @@ typedef struct sockaddr_in 	sockaddr_in;
 typedef struct hostent 		hostent;
 typedef struct servent 		servent;
 
-int etat; /* Variable état partie 0 -début 1 encours 2 fin*/
-
 //Fonction écoute
 //Le client reste à l'écoute du serveur
-static void * ecoute (void * socket_descriptor){
+static void* ecoute (void * socket_descriptor){
     int* socket = (int *) socket_descriptor;
-    char buffer[256];
-    int taille;
-    while(1){
-        read(*socket, buffer, (int)sizeof(buffer));
-
-        switch(buffer[0]){
-            case '0':   //il reste x coup à jouer
-                printf("Il reste %s coup(s) à jouer \n", &buffer[1]);
-                break;
-
-            case '1': // affichage mot secret
-                printf("Mot secret : %s \n", &buffer[1]);
-                break; 
-            case '2'://proposer lettre
-                printf("Mot secret : %s \n",&buffer[1]);
-                etat=2;
-                break;
-            default:
-                break;
+    int jeuEnCours = 1;
+    while(jeuEnCours){
+    	char buffer[256];
+        if(read(*socket, buffer, (int)sizeof(buffer))<0){
+        	//le serveur n'existe probablement plus
+        	break;
         }
+        //On décode le message
+        char secret_word[256];
+        char life[256];
+        char state[256];
+        //On décrypte le message recu afin d'en extraire les 3 informations. Structure du message : "mot_codé vie etat"
         
+		char delim[] = " ";
 
-
-        if(strcmp(buffer,"start")== 0)
-            etat=1;
-        else
-         printf("%s \n", buffer);
+		char *ptr = strtok(buffer, delim);
+		strcpy(secret_word,ptr);
+		
+		ptr = strtok(NULL, delim);
+		strcpy(life,ptr);
+		
+		ptr = strtok(NULL, delim);
+		strcpy(state,ptr);
+        
+        //On affiche les informations :
+        printf("\e[1;1H\e[2J"); //clear
+        printf("\nUn joueur à fait une nouvelle proposition !\n");
+        printf("Il ne reste plus que %s coup(s) à jouer \n",life);
+        printf("Mot mystère : %s \n", secret_word);
+        
+        if(state[0]=='1'){
+        	printf("Perdu :C Le mot secret était %s\n",secret_word);
+        	jeuEnCours = 0;
+        	close(*socket);
+		    exit(0);
+        }
+        if(state[0]=='2'){
+        	printf("Gagné ! Le mot secret était %s\n",secret_word);
+        	jeuEnCours = 0;
+		    close(*socket);
+		    exit(0);
+        }
+        	
     }
-
+	return NULL;
 }
 
+/********************************************************/
+/*                                                      */
+/*                      Main                            */
+/*                                                      */
+/********************************************************/
 
 int main(int argc, char **argv) {
   
     int 	socket_descriptor ; 	/* descripteur de socket */
-	int 	longueur; 		/* longueur d'un buffer utilisé */
     sockaddr_in adresse_locale; 	/* adresse de socket local */
     hostent *	ptr_host; 		/* info sur une machine hote */
-    servent *	ptr_service; 		/* info sur service */
-    char 	buffer[256];
     char *	prog; 			/* nom du programme */
     char *	host; 			/* nom de la machine distante */
     char * mesg; 			/* message envoyé */
-    char lettre;
     pthread_t thread_listen  ;
     char pseudo[32];
     
      
     if (argc != 3) {
-	perror("usage : client <adresse-serveur> <type_message>");
-	exit(1);
+		perror("usage : client <adresse-serveur> <type_message>");
+		exit(1);
     }
    
     prog = argv[0];
     host = argv[1];
     mesg = argv[2];
-    
+    printf("\e[1;1H\e[2J"); //clear
     printf("nom de l'executable : %s \n", prog);
     printf("adresse du serveur  : %s \n", host);
     printf("message envoye      : %s \n", mesg);
@@ -118,21 +133,21 @@ int main(int argc, char **argv) {
     
     /* creation de la socket */
     if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-	perror("erreur : impossible de creer la socket de connexion avec le serveur.");
-	exit(1);
+		perror("erreur : impossible de creer la socket de connexion avec le serveur.");
+		exit(1);
     }
     
     /* tentative de connexion au serveur dont les infos sont dans adresse_locale */
     if ((connect(socket_descriptor, (sockaddr*)(&adresse_locale), sizeof(adresse_locale))) < 0) {
-	perror("erreur : impossible de se connecter au serveur.");
-	exit(1);
+		perror("erreur : impossible de se connecter au serveur.");
+		exit(1);
     }
     
     printf("connexion etablie avec le serveur. \n");
-    
-    printf("********************************\n");
-    printf(" Bienvenue dans le Jeu du Pendu!\n");
-    printf("********************************\n");
+    printf("\e[1;1H\e[2J"); //clear
+    printf("**********************************\n");
+    printf("* Bienvenue dans le Jeu du Pendu!*\n");
+    printf("**********************************\n");
 
     //Saisie du pseudo du joueur
     printf("Veuillez saisir votre pseudo : \n");
@@ -145,63 +160,23 @@ int main(int argc, char **argv) {
     
     printf("Vous avez choisi le pseudo : %s !\n", pseudo);
 
-    printf("En attente d'autre joueurs...\n");
-
     // Le client se met en maintenant en écoute
     pthread_create(&thread_listen,NULL, ecoute, &socket_descriptor);
 
-    //Tant que les messages émis sont différents de "quit"
-    while(strcmp(mesg,"quit")!='\0'){
-
-        if(etat == 2){
-            printf("ffefe");
-            fgets(mesg,sizeof(mesg),stdin);
-            printf("feffev");
-            mesg[strcspn(mesg, "\n")] = '\0';
-
-            if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
-                perror("erreur : impossible d'ecrire le message destine au serveur.");
-                exit(1);
-            }
-        }
-        /*
-        fgets(mesg, sizeof(mesg), stdin);
-        mesg[strcspn(mesg, "\n")] = '\0';
-
-            //Si le jeu n'est pas fini, on envoie des lettres
-            scanf("%c",lettre);
-            mesg = lettre;
-
-      
-            if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
-            perror("erreur : impossible d'ecrire le message destine au serveur.");
-            exit(1);
-            }
-        */
+    //Tant que les messages émis sont différents de "quit" et que la partie n'est pas finie
+    while((strcmp(mesg,"quit")!='\0')){
+		//Envoie d'un message au serveur, seul la première lettre compte
+		fgets(mesg, sizeof mesg, stdin);
+		mesg[strcspn(mesg, "\n")] = '\0';
+		if ((write(socket_descriptor,&mesg[0],1))< 0){
+		    perror("erreur : impossible d'écrire le message au serveur.");
+		    exit(1);
+		}
     }
     printf("Vous quittez le Jeu du Pendu... Fermeture..\n");
-   
-    /* mise en attente du prgramme pour simuler un delai de transmission */
-   // sleep(3);
-     
-   // printf("message envoye au serveur. \n");
-                
-    /* lecture de la reponse en provenance du serveur */
-   /* 
-   
-    while((longueur = read(socket_descriptor, buffer, sizeof(buffer))) > 0) {
-	printf("reponse du serveur : \n");
-	write(1,buffer,longueur);
-    }
-    
-    */
-    
     printf("\nfin de la reception.\n");
-    
     close(socket_descriptor);
-    
     printf("connexion avec le serveur fermee, fin du programme.\n");
-    
     exit(0);
     
 }
