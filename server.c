@@ -32,11 +32,11 @@ struct Sthread{
 }typedef thread;
 
 //PARAMETRES
-int nb_joueurs_requis = 2 ;
+int nb_joueurs_requis = 5 ;
 
 //VARIABLES GLOBALES
 int nbj_rejoins = 0;
-int sockets[2];
+int sockets[5]; //Tableau de sockets au nombre de joueurs configurés dans la variable nb_joueurs_requis #Parametres
 int socket_descriptor ; 	/* descripteur de socket */
 int longueur_buffer; 		/* longueur d'un buffer utilisé */
 char motSecret[100] = {0}; // Ce sera le mot à trouver
@@ -64,25 +64,20 @@ void * pendu(void* params)
     char pseudo[32];
     int pseudoEnvoye=0;
     char buffer[256];
-
-    //printf("Debug :  Pseudo ok = %d\n",*(*param).pseudoOK);
-   
      //début du programme 
     while(pseudoEnvoye == 0){
         read((* param).socket,buffer,sizeof(buffer));
         strcpy(pseudo,buffer);
         printf("%s---Pseudo choisit : %s\n",pseudo,pseudo);
         (*(*param).joueurs_prets) += 1;
-        //printf("Pseudo ok dans while %d\n",*(*param).pseudoOK);
         pseudoEnvoye=1;   
     }
-    //printf("Debug : Pseudo ok après while = %d\n",*(*param).pseudoOK);
             
     printf("%s---En attente des autres joueurs---\n",pseudo);
     while(*(* param).etat == 0){
     
     }
-    printf("%s---Je commence le jeu !---\n",pseudo);
+    printf("%s---Je commence le jeu - Renseignez une lettre !---\n",pseudo);
     
     int taille_message = strlen(motSecret)+1+2+1+1+1;
 	char message[taille_message];
@@ -138,6 +133,12 @@ void * pendu(void* params)
         	}
         	else if(remaining_life<0){
         		message[char_to_write] = '1';
+                //Remplacer le mot crypté par le mot secret.
+                for (int i = 0 ; i < strlen(motSecret) ; i++)
+                {            	
+            		message[i] = motSecret[i];
+            	}
+
         	}else{
         		message[char_to_write] = '0';
         	}
@@ -267,7 +268,6 @@ int main(int argc, char **argv) {
         lettreTrouvee[i] = 0;
     }    
     printf("****mot pioché !****\n");
-    strcpy(motSecret,"LORIS");
 
 
     pthread_t thread_joueur;
