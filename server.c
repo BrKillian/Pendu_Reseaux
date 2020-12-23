@@ -24,6 +24,7 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
+//On créer une structure de thread pour permettre le multi-client. Pour sauvegarder les sockets connexions joueurs
 struct Sthread{
     int socket; // le socket géré 
     int * etat; /* Variable état partie 0 -début 1 encours 2 fin*/
@@ -32,7 +33,7 @@ struct Sthread{
 }typedef thread;
 
 //PARAMETRES
-int nb_joueurs_requis = 5 ;
+int nb_joueurs_requis = 5 ; //Nombre de joueurs pour la partie
 
 //VARIABLES GLOBALES
 int nbj_rejoins = 0;
@@ -57,26 +58,36 @@ void msg_all(int socks[5],char * msg){
   }
 }
 
+/*
+* La fonction jeu du pendu, une fois lancée elle permet d'afficher la liste de joueurs connecté (pseudo)
+* Tant que les joueurs ont encore des coups restants, alors ils peuvent rentrer des lettres.
+*/
 void * pendu(void* params)
 {
+    //INSTANCIATION DES VARIABLES LOCALES
     thread* param = params;
     char lettre = 0; // Stocke la lettre proposée par l'utilisateur (retour du scanf)
     char pseudo[32];
     int pseudoEnvoye=0;
     char buffer[256];
      //début du programme 
-    while(pseudoEnvoye == 0){
+
+    //Tant qu'on a pas reçu tous les pseudo, on récupère et lit tous les sockets client pour afficher les pseudos joueurs côté serveur.
+    while(pseudoEnvoye == 0)
+    {
         read((* param).socket,buffer,sizeof(buffer));
         strcpy(pseudo,buffer);
         printf("%s---Pseudo choisit : %s\n",pseudo,pseudo);
         (*(*param).joueurs_prets) += 1;
         pseudoEnvoye=1;   
     }
-            
+    //Tant que le nombre de joueurs n'est pas atteint, et que l'intégralité des pseudos ne sont pas envoyés, on se met en attente d'envoie client.        
     printf("%s---En attente des autres joueurs---\n",pseudo);
-    while(*(* param).etat == 0){
-    
+    while(*(* param).etat == 0)
+    {
     }
+    //Les clients sont tous connectés et ont tous envoyé leur pseudo, le jeu peut commencer.
+    // C'est au client d'envoyer une lettre
     printf("%s---Je commence le jeu - Renseignez une lettre !---\n",pseudo);
     
     int taille_message = strlen(motSecret)+1+2+1+1+1;
@@ -84,13 +95,17 @@ void * pendu(void* params)
     // On continue à jouer tant qu'il reste au moins un coup à jouer ou qu'on à pas gagner
     while (jeuEnCours)
     {
+            //Si on a une erreur de lecture de socket, alors on affecte la vie restante à -2, pour faire cesser le jeu.
             if(read((* param).socket, buffer, 1)<0){
             	remaining_life = -2;
             	break;
             }
+            //Si on a pas d'erreur, alors on récupère la lettre et on la convertit dans un format majuscule pour simplifier la suite du programme. (Et eviter la casse)
             lettre = toupper((buffer[0]));
+            //On affiche la lettre reçue
             printf("%s --- : Lettre recue : %s\n",pseudo,&lettre);
             
+            //Si la lettre n'est pas comprise dans le mot à trouver, alors on décrémente le nombre de coup restant.
             if (!rechercheLettre(lettre, motSecret, lettreTrouvee)){
                 remaining_life--;
             }
@@ -100,6 +115,7 @@ void * pendu(void* params)
 			int char_to_write = 0;
 
             //On recopie le mot secret dans le message à envoyer
+            //Pour chaque lettre du mot secret, on la crypte et remplace (au niveau de l'affichage) par des étoiles.
             for (int i = 0 ; i < strlen(motSecret) ; i++){
             	if (lettreTrouvee[i]) {
             		message[i] = motSecret[i];
@@ -110,6 +126,8 @@ void * pendu(void* params)
             }
 			
 			//On ajoute au message les points de vie restant
+            //On veut pouvoir afficher nos points de vie, sauf qu'on doit les déclarer en tant que string pour faciliter l'affichage dans un texte.
+            //Vu qu'on a besoin d'afficher un entier comprenant deux caractères, on doit les déclarer en char avec un caractère "tampon" supplémentaire.
             char life_char[3];
             if(remaining_life<10){
             	life_char[0] = '0';
@@ -117,7 +135,8 @@ void * pendu(void* params)
             }else{
             	snprintf(life_char,sizeof(life_char),"%d",(int)remaining_life);
             }
-            
+            //On transmet bout à bout, caractère par caractère notre message pour ,toujours, afficher les points de vies/coups restants.
+            // Pour l'afficher côté Client
             message[char_to_write] = ' ';
             char_to_write++;
             message[char_to_write] = life_char[0];
@@ -128,9 +147,11 @@ void * pendu(void* params)
             char_to_write++;
 			
 			//Enfin on ajoute l'état de la partie
+            //Si le mot est trouvé alors on passe à l'état gagné (2) et modifie notre message à envoyer aux clients.
             if (gagne(lettreTrouvee, strlen(motSecret))){
 				message[char_to_write] = '2';
         	}
+            // Si il n'y a plus de coups restants, alors on passe à l'état (1) : perdu, fait passer cet état dans notre message client et envoie le mot Secret qu'il fallit trouver.
         	else if(remaining_life<0){
         		message[char_to_write] = '1';
                 //Remplacer le mot crypté par le mot secret.
@@ -138,13 +159,12 @@ void * pendu(void* params)
                 {            	
             		message[i] = motSecret[i];
             	}
-
+            //Sinon le jeu se poursuit et on reste dans l'état en cours(0)
         	}else{
         		message[char_to_write] = '0';
         	}
         	char_to_write++;
-        	message[char_to_write] = '!';
-        	char_to_write++;
+            //on ajoute \0 pour signifer la fin du message
         	message[char_to_write] = '\0';
         	char_to_write++;
         	
@@ -154,6 +174,7 @@ void * pendu(void* params)
     return NULL;
 }
 
+//Fonction gagne  permet de definir quand est ce toutes les lettres du mot secret correspondent au mot à trouver
  int gagne(int lettreTrouvee[], long tailleMot)
   {
       long i = 0;
@@ -168,7 +189,7 @@ void * pendu(void* params)
       return joueurGagne;
   }
 
- 
+ //Fonction qui permet de trouver si la lettre renseignée en paramètre est présente dans le mot.
   int rechercheLettre(char lettre, char motSecret[], int lettreTrouvee[])
     {
         long i = 0;
@@ -238,6 +259,7 @@ int main(int argc, char **argv) {
     adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
+    //On affiche le numéro de port du serveur
     printf("****numero de port pour la connexion au serveur : %d ****\n", 
 		   ntohs(adresse_locale.sin_port) /*ntohs(ptr_service->s_port)*/);
     
@@ -259,7 +281,7 @@ int main(int argc, char **argv) {
     //pioche un mot aléatoire pour le jeu
     if (!piocherMot(motSecret))
         exit(0);
-
+    //On alloue dynamiquement de la mémoire de la taille de notre mot secret.
     lettreTrouvee = malloc(strlen(motSecret) * sizeof(int));    
     if (lettreTrouvee == NULL)
             exit(0);
@@ -269,10 +291,11 @@ int main(int argc, char **argv) {
     }    
     printf("****mot pioché !****\n");
 
-
+    //Tant que nous n'avons pas atteint notre nombre de joueurs, on récupère les connexions entrantes des clients.
     pthread_t thread_joueur;
     while((nbj_rejoins < nb_joueurs_requis))
     {
+        //On récupère la longueur de l'adresse du client courant
 		longueur_adresse_courante = sizeof(adresse_client_courant);
 
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
@@ -285,16 +308,19 @@ int main(int argc, char **argv) {
 			perror("!!!! erreur : impossible d'accepter la connexion avec le client. !!!!");
 			exit(1);
 		}
+        //On affecter à notre tableau de socket la nouvelle connexion entrante.
         sockets[nbj_rejoins]=nouv_socket_descriptor;
         printf("****Un nouveau joueur a rejoint la partie !****\n");
         //création des paramètres pour les joueurs
         params[nbj_rejoins] = (thread) {nouv_socket_descriptor,&etat,nbj_rejoins,&joueurs_prets}; 
         pthread_create(&thread_joueur, NULL, &pendu, &params[nbj_rejoins]);
+        // Et on instancie/Affiche le nombre de joueurs compatibilisés
         nbj_rejoins++;
         printf("****Nombre de joueurs : %d/%d****\n",nbj_rejoins,nb_joueurs_requis);
     }
 
     while(joueurs_prets != nb_joueurs_requis);  
+    //Une fois qu'on atteint le nombre de joueurs requis, on affiche un message début du jeu, et on appelle notre fonction pendu (présente dans les thread_creates des joueurs)
     printf("****début du jeu**** \n");
     etat=1;
     while((jeuEnCours));

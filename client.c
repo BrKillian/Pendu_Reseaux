@@ -24,9 +24,12 @@ typedef struct servent 		servent;
 static void* ecoute (void * socket_descriptor){
     int* socket = (int *) socket_descriptor;
     int jeuEnCours = 1;
-    while(jeuEnCours){
+    //Tant que le jeu est en cours on récupère/lit le socket serveur.
+    while(jeuEnCours)
+    {
     	char buffer[256];
-        if(read(*socket, buffer, (int)sizeof(buffer))<0){
+        if(read(*socket, buffer, (int)sizeof(buffer))<0)
+        {
         	//le serveur n'existe probablement plus
         	break;
         }
@@ -38,6 +41,7 @@ static void* ecoute (void * socket_descriptor){
         
 		char delim[] = " ";
 
+// on utilise strtok pour split en 3 bouts différents pour pouvoir récupérer les informations reçues.
 		char *ptr = strtok(buffer, delim);
 		strcpy(secret_word,ptr);
 		
@@ -87,9 +91,9 @@ int main(int argc, char **argv) {
     pthread_t thread_listen  ;
     char pseudo[32];
     
-     
+    //Le serveur attends 3 arguments pour démarrer la connexion
     if (argc != 3) {
-		perror("usage : client <adresse-serveur> <type_message>");
+		perror("usage : client <adresse-serveur> <type_message><message_lambda>");
 		exit(1);
     }
    
